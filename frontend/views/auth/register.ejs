@@ -1,0 +1,129 @@
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-5 col-md-7">
+        <div class="card border-0">
+            <div class="card-header text-center">
+                <h2><i class="bi bi-flower1 me-2"></i>Registrer<i class="bi bi-flower1 ms-2"></i></h2>
+            </div>
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <i class="bi bi-person-plus" style="font-size: 3rem; color: var(--secondary-color);"></i>
+                    <p class="mt-2 text-muted">Bli med i vårt quiz-fellesskap</p>
+                </div>
+                <form id="register-form" action="/api/auth/register" method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            <i class="bi bi-person me-2"></i>Brukernavn
+                        </label>
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Velg et brukernavn" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="bi bi-envelope-heart me-2"></i>E-post
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="din.epost@eksempel.no" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="bi bi-lock me-2"></i>Passord
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Velg et sikkert passord" required minlength="6">
+                        <div class="form-text">Må være minst 6 tegn</div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="confirm-password" class="form-label">
+                            <i class="bi bi-check-circle me-2"></i>Bekreft passord
+                        </label>
+                        <input type="password" class="form-control" id="confirm-password" name="confirmPassword" placeholder="Bekreft passordet ditt" required>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary py-2">
+                            <i class="bi bi-person-plus me-2"></i>Opprett konto
+                        </button>
+                    </div>
+                </form>
+                <div class="text-center mt-4">
+                    <p>Har du allerede en konto? <a href="/auth/login" class="fw-bold text-decoration-none">Logg inn her</a></p>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-3">
+            <i class="bi bi-heart-fill mx-1" style="color: var(--primary-color); font-size: 0.8rem;"></i>
+            <i class="bi bi-star-fill mx-1" style="color: var(--warning-color); font-size: 0.8rem;"></i>
+            <i class="bi bi-flower1 mx-1" style="color: var(--success-color); font-size: 0.8rem;"></i>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('register-form');
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            // Basic validation
+            if (password !== confirmPassword) {
+                const errorHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <i class="bi bi-exclamation-circle me-2"></i> Passordene samsvarer ikke
+                    </div>
+                `;
+                form.insertAdjacentHTML('beforebegin', errorHTML);
+                return;
+            }
+            
+            try {
+                // Show a loading spinner
+                const loadingHTML = `
+                    <div class="text-center">
+                        <div class="loader"></div>
+                        <p class="text-muted mt-3">Oppretter kontoen din...</p>
+                    </div>
+                `;
+                form.innerHTML = loadingHTML;
+                
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Save token to localStorage
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Show success message before redirect
+                    form.innerHTML = `
+                        <div class="text-center">
+                            <i class="bi bi-check-circle-fill" style="font-size: 3rem; color: var(--success-color);"></i>
+                            <p class="mt-3">Registrering vellykket! Velkommen!</p>
+                            <p class="text-muted">Omdirigerer til hjemmesiden...</p>
+                        </div>
+                    `;
+                    
+                    // Redirect to home page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    // Reset form and show error
+                    window.location.reload();
+                    alert(data.message || 'Registrering mislyktes');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.reload();
+                alert('En feil oppstod. Vennligst prøv igjen.');
+            }
+        });
+    });
+</script>

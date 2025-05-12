@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> | IT Quiz</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <!-- Off-canvas sidebar for mobile -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebar" aria-labelledby="sidebarLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="sidebarLabel">IT Quiz</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <!-- Mobile sidebar navigation -->
+            <div class="mobile-sidebar-content">
+                <!-- Logo section -->
+                <div class="sidebar-logo mb-4">
+                    <div class="logo-icon"><i class="bi bi-code-square"></i></div>
+                    <h2>IT Quiz</h2>
+                </div>
+                
+                <!-- Navigation links -->
+                <nav class="sidebar-nav">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link <%= title === 'Home' ? 'active' : '' %>" href="/">
+                                <i class="bi bi-house nav-icon"></i> Hjem
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= title === 'Browse Quizzes' ? 'active' : '' %>" href="/quizzes/browse">
+                                <i class="bi bi-collection nav-icon"></i> Bla gjennom Quizer
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= title === 'Create Quiz' ? 'active' : '' %>" href="/quizzes/create">
+                                <i class="bi bi-plus-circle nav-icon"></i> Lag Quiz
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item sidebar-divider"></li>
+                        
+                        <% if (locals.user) { %>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/profile">
+                                    <i class="bi bi-person nav-icon"></i> Profil
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/auth/logout">
+                                    <i class="bi bi-box-arrow-right nav-icon"></i> Logg ut
+                                </a>
+                            </li>
+                        <% } else { %>
+                            <li class="nav-item">
+                                <a class="nav-link <%= title === 'Login' ? 'active' : '' %>" href="/auth/login">
+                                    <i class="bi bi-box-arrow-in-right nav-icon"></i> Logg inn
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= title === 'Register' ? 'active' : '' %>" href="/auth/register">
+                                    <i class="bi bi-person-plus nav-icon"></i> Registrer
+                                </a>
+                            </li>
+                        <% } %>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main layout container -->
+    <div class="dashboard-container">
+        <!-- Sidebar (desktop) -->
+        <aside class="sidebar d-none d-lg-flex">
+            <!-- Logo section -->
+            <div class="sidebar-logo mb-4">
+                <div class="logo-icon"><i class="bi bi-code-square"></i></div>
+                <h2>IT Quiz</h2>
+            </div>
+            
+            <!-- Navigation links -->
+            <nav class="sidebar-nav">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link <%= title === 'Home' ? 'active' : '' %>" href="/">
+                            <i class="bi bi-house nav-icon"></i> Hjem
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <%= title === 'Browse Quizzes' ? 'active' : '' %>" href="/quizzes/browse">
+                            <i class="bi bi-collection nav-icon"></i> Bla gjennom Quizer
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <%= title === 'Create Quiz' ? 'active' : '' %>" href="/quizzes/create">
+                            <i class="bi bi-plus-circle nav-icon"></i> Lag Quiz
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item sidebar-divider"></li>
+                    
+                    <% if (locals.user) { %>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/profile">
+                                <i class="bi bi-person nav-icon"></i> Profil
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/auth/logout">
+                                <i class="bi bi-box-arrow-right nav-icon"></i> Logg ut
+                            </a>
+                        </li>
+                    <% } else { %>
+                        <li class="nav-item">
+                            <a class="nav-link <%= title === 'Login' ? 'active' : '' %>" href="/auth/login">
+                                <i class="bi bi-box-arrow-in-right nav-icon"></i> Logg inn
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= title === 'Register' ? 'active' : '' %>" href="/auth/register">
+                                <i class="bi bi-person-plus nav-icon"></i> Registrer
+                            </a>
+                        </li>
+                    <% } %>
+                </ul>
+            </nav>
+            
+            <!-- Footer section in sidebar -->
+            <div class="sidebar-footer">
+                <p>&copy; <%= new Date().getFullYear() %> IT Quiz</p>
+            </div>
+        </aside>
+        
+        <!-- Main content -->
+        <main class="content">
+            <!-- Top header bar -->
+            <header class="content-header">
+                <div class="container-fluid d-flex justify-content-between align-items-center">
+                    <button class="btn btn-icon sidebar-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    
+                    <h1 class="page-title"><%= title %></h1>
+                    
+                    <div class="header-right">
+                        <div class="theme-toggle">
+                            <i class="bi bi-sun-fill" id="theme-light"></i>
+                            <i class="bi bi-moon-fill" id="theme-dark"></i>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Content area -->
+            <div class="content-body">
+                <div class="container-fluid">
+                    <!-- Alert messages -->
+                    <% if (locals.messages && locals.messages.error) { %>
+                        <div class="alert alert-danger" role="alert">
+                            <i class="bi bi-exclamation-circle-fill me-2"></i><%= messages.error %>
+                        </div>
+                    <% } %>
+                    <% if (locals.messages && locals.messages.success) { %>
+                        <div class="alert alert-success" role="alert">
+                            <i class="bi bi-check-circle-fill me-2"></i><%= messages.success %>
+                        </div>
+                    <% } %>
+                    
+                    <!-- Main content from child template -->
+                    <%- body %>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Theme toggling functionality
+            const themeLight = document.getElementById('theme-light');
+            const themeDark = document.getElementById('theme-dark');
+            
+            function setTheme(theme) {
+                document.body.classList.remove('theme-light', 'theme-dark');
+                document.body.classList.add('theme-' + theme);
+                localStorage.setItem('preferred-theme', theme);
+            }
+            
+            // Check for saved theme preference or use default
+            const savedTheme = localStorage.getItem('preferred-theme') || 'light';
+            setTheme(savedTheme);
+            
+            // Fix the event listeners - sun icon should set light theme, moon icon should set dark theme
+            themeLight.addEventListener('click', () => setTheme('light'));
+            themeDark.addEventListener('click', () => setTheme('dark'));
+            
+            // Initialize tooltips
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        });
+    </script>
+</body>
+</html>

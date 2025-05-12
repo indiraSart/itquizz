@@ -1,0 +1,118 @@
+<div class="card mb-4 border-0">
+    <div class="card-body">
+        <div class="quiz-header mb-4 position-relative">
+            <div class="position-absolute top-0 end-0 me-2 mt-2">
+                <i class="bi bi-stars" style="font-size: 1.5rem; color: var(--primary-color); opacity: 0.5;"></i>
+            </div>
+            <h1 class="mb-3"><i class="bi bi-patch-question me-2"></i><%= quiz.title %></h1>
+            <p class="lead"><%= quiz.description %></p>
+            <div class="d-flex justify-content-between align-items-center flex-wrap mt-3">
+                <span class="badge bg-primary mb-2"><i class="bi bi-tag me-1"></i><%= quiz.category %></span>
+                <span class="text-muted mb-2"><i class="bi bi-person me-1"></i>Laget av: <%= quiz.creator.username || 'Ukjent' %></span>
+            </div>
+            <hr class="mt-3" style="border-color: rgba(248, 165, 194, 0.2);">
+        </div>
+
+        <div class="quiz-instructions mb-4 p-3" style="background-color: rgba(195, 174, 214, 0.1); border-radius: 15px;">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-info-circle me-2" style="color: var(--secondary-color);"></i>
+                <h5 class="mb-0">Instruksjoner</h5>
+            </div>
+            <p class="mb-0">Svar på alle spørsmålene og send inn svarene når du er ferdig. Lykke til!</p>
+        </div>
+    </div>
+</div>
+
+<form id="quizForm" action="/quizzes/<%= quiz._id %>/submit" method="POST">
+    <% quiz.questions.forEach((question, index) => { %>
+        <div class="card question-card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-puzzle-fill me-2" style="color: var(--primary-color);"></i>
+                    Spørsmål <%= index + 1 %>
+                </h5>
+                <span class="badge bg-info">
+                    <i class="bi bi-star-fill me-1"></i>
+                    <%= question.points %> poeng<%= question.points > 1 ? '' : '' %>
+                </span>
+            </div>
+            <div class="card-body">
+                <p class="lead mb-4"><%= question.questionText %></p>
+                
+                <% if (question.questionType === 'multipleChoice') { %>
+                    <div class="option-list">
+                        <% question.options.forEach((option, optionIndex) => { %>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="answers[<%= index %>]" 
+                                       id="q<%= index %>_opt<%= optionIndex %>" value="<%= optionIndex %>" required>
+                                <label class="form-check-label w-100" for="q<%= index %>_opt<%= optionIndex %>">
+                                    <%= option %>
+                                </label>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } else if (question.questionType === 'trueFalse') { %>
+                    <div class="option-list">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="answers[<%= index %>]" 
+                                   id="q<%= index %>_true" value="true" required>
+                            <label class="form-check-label w-100" for="q<%= index %>_true">
+                                <i class="bi bi-check-circle me-2"></i>Sant
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="answers[<%= index %>]" 
+                                   id="q<%= index %>_false" value="false" required>
+                            <label class="form-check-label w-100" for="q<%= index %>_false">
+                                <i class="bi bi-x-circle me-2"></i>Usant
+                            </label>
+                        </div>
+                    </div>
+                <% } else if (question.questionType === 'shortAnswer') { %>
+                    <div class="form-group">
+                        <input type="text" class="form-control" name="answers[<%= index %>]" placeholder="Skriv svaret ditt her..." required>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    <% }) %>
+
+    <div class="card border-0 mb-5">
+        <div class="card-body text-center">
+            <button type="submit" class="btn btn-primary btn-lg px-5">
+                <i class="bi bi-send-check me-2"></i>Send inn svar
+            </button>
+        </div>
+    </div>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fancy animations for quiz questions
+        const questions = document.querySelectorAll('.question-card');
+        questions.forEach((question, index) => {
+            question.style.animationDelay = `${index * 0.1}s`;
+        });
+        
+        // Highlight selected option
+        const options = document.querySelectorAll('.form-check-input');
+        options.forEach(option => {
+            option.addEventListener('change', function() {
+                // Remove highlight from all options in this question
+                const questionCard = this.closest('.card');
+                const allOptions = questionCard.querySelectorAll('.form-check');
+                allOptions.forEach(opt => {
+                    opt.style.backgroundColor = '';
+                    opt.style.borderLeft = '';
+                });
+                
+                // Highlight the selected option
+                if (this.checked) {
+                    const selectedOption = this.closest('.form-check');
+                    selectedOption.style.backgroundColor = 'rgba(248, 165, 194, 0.1)';
+                    selectedOption.style.borderLeft = '2px solid var(--primary-color)';
+                }
+            });
+        });
+    });
+</script>

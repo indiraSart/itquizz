@@ -1,0 +1,324 @@
+<h1>Lag en ny quiz</h1>
+
+<form id="quizForm" action="/quizzes/create" method="POST">
+    <div class="mb-3">
+        <label for="title" class="form-label">Quiz tittel</label>
+        <input type="text" class="form-control" id="title" name="title" required>
+    </div>
+    
+    <div class="mb-3">
+        <label for="description" class="form-label">Beskrivelse</label>
+        <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+    </div>
+    
+    <div class="mb-3">
+        <label for="category" class="form-label">Kategori</label>
+        <input type="text" class="form-control" id="category" name="category" required>
+    </div>
+    
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="isPublic" name="isPublic" checked>
+        <label class="form-check-label" for="isPublic">Gjør quizen offentlig</label>
+    </div>
+    
+    <div id="questionsContainer">
+        <!-- Question template will be inserted here -->
+    </div>
+    
+    <button type="button" class="btn btn-secondary mb-4" id="addQuestion">Legg til spørsmål</button>
+    
+    <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary">Lag quiz</button>
+    </div>
+</form>
+
+<template id="questionTemplate">
+    <div class="card mb-4 question-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>Spørsmål #<span class="question-number"></span></h5>
+            <button type="button" class="btn btn-danger btn-sm remove-question">Fjern</button>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Spørsmålstekst</label>
+                <input type="text" class="form-control" name="questions[INDEX].questionText" required>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Spørsmålstype</label>
+                <select class="form-control question-type" name="questions[INDEX].questionType">
+                    <option value="multipleChoice">Flervalg</option>
+                    <option value="trueFalse">Sant/Usant</option>
+                    <option value="shortAnswer">Kort svar</option>
+                </select>
+            </div>
+            
+            <div class="options-container mb-3">
+                <label class="form-label">Alternativer</label>
+                <div class="option-list">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">A</span>
+                        <input type="text" class="form-control" name="questions[INDEX].options[0]" required>
+                    </div>
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">B</span>
+                        <input type="text" class="form-control" name="questions[INDEX].options[1]" required>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary add-option">+ Legg til alternativ</button>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Riktig svar</label>
+                <input type="text" class="form-control" name="questions[INDEX].correctAnswer" required>
+                <small class="form-text text-muted">For flervalg, skriv inn alternativ-bokstaven. For sant/usant, skriv "true" eller "false". For kort svar, skriv inn det forventede svaret.</small>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Poeng</label>
+                <input type="number" class="form-control" name="questions[INDEX].points" value="1" min="1" required>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quizForm = document.getElementById('quizForm');
+    const questionsContainer = document.getElementById('questionsContainer');
+    const addQuestionBtn = document.getElementById('addQuestion');
+    const questionTemplate = document.getElementById('questionTemplate').innerHTML;
+    
+    // Keep track of the highest question index used
+    let nextQuestionIndex = 0;
+    
+    // Add initial question
+    addQuestion();
+    
+    // Event listener for adding a new question
+    addQuestionBtn.addEventListener('click', addQuestion);
+    
+    // Add a new question to the form
+    function addQuestion() {
+        // Create a new div to hold the question
+        const tempDiv = document.createElement('div');
+        
+        // Use the next available index for this question
+        const currentIndex = nextQuestionIndex++;
+        
+        // Replace INDEX placeholders with the current index
+        tempDiv.innerHTML = questionTemplate.replace(/INDEX/g, currentIndex);
+        
+        // Get the first child (the actual question card)
+        const questionDiv = tempDiv.firstElementChild;
+        
+        // Store the index and set the display number
+        questionDiv.dataset.questionIndex = currentIndex;
+        questionDiv.querySelector('.question-number').textContent = questionsContainer.children.length + 1;
+        
+        // Add event listener for removing the question
+        questionDiv.querySelector('.remove-question').addEventListener('click', function() {
+            if (questionsContainer.children.length > 1) {
+                questionDiv.remove();
+                updateQuestionNumbers(); // Just update the visual numbers, keep indices
+            } else {
+                alert('Quiz må ha minst ett spørsmål');
+            }
+        });
+        
+        // Add event listener for question type change
+        questionDiv.querySelector('.question-type').addEventListener('change', function(e) {
+            handleQuestionTypeChange(e.target, questionDiv);
+        });
+        
+        // Add event listener for adding options
+        questionDiv.querySelector('.add-option').addEventListener('click', function() {
+            addOption(questionDiv);
+        });
+        
+        // Add the new question to the container
+        questionsContainer.appendChild(questionDiv);
+        
+        // Initialize the question with the correct type
+        const questionType = questionDiv.querySelector('.question-type');
+        handleQuestionTypeChange(questionType, questionDiv);
+    }
+    
+    // Handle question type change
+    function handleQuestionTypeChange(selectElement, questionDiv) {
+        const optionsContainer = questionDiv.querySelector('.options-container');
+        const optionList = questionDiv.querySelector('.option-list');
+        
+        // Clear existing options
+        optionList.innerHTML = '';
+        
+        if (selectElement.value === 'multipleChoice') {
+            // Add two default options for multiple choice
+            addDefaultOption(questionDiv, 'A', 0);
+            addDefaultOption(questionDiv, 'B', 1);
+            optionsContainer.style.display = 'block';
+        } else if (selectElement.value === 'trueFalse') {
+            // Add True and False options
+            addDefaultOption(questionDiv, 'A', 0, 'Sant');
+            addDefaultOption(questionDiv, 'B', 1, 'Usant');
+            optionsContainer.style.display = 'block';
+        } else {
+            // Short answer has no options
+            optionsContainer.style.display = 'none';
+        }
+    }
+    
+    // Add a default option to the option list
+    function addDefaultOption(questionDiv, letter, index, value = '') {
+        const optionList = questionDiv.querySelector('.option-list');
+        const questionIndex = questionDiv.dataset.questionIndex;
+        
+        const optionDiv = document.createElement('div');
+        optionDiv.className = 'input-group mb-2';
+        optionDiv.innerHTML = `
+            <span class="input-group-text">${letter}</span>
+            <input type="text" class="form-control" name="questions[${questionIndex}].options[${index}]" value="${value}" required>
+        `;
+        
+        optionList.appendChild(optionDiv);
+    }
+    
+    // Add a new option to a question
+    function addOption(questionDiv) {
+        const optionList = questionDiv.querySelector('.option-list');
+        const optionCount = optionList.children.length;
+        const questionIndex = questionDiv.dataset.questionIndex;
+        
+        // Map index to letter (0->A, 1->B, 2->C, etc.)
+        const optionLetter = String.fromCharCode(65 + optionCount);
+        
+        const optionDiv = document.createElement('div');
+        optionDiv.className = 'input-group mb-2';
+        optionDiv.innerHTML = `
+            <span class="input-group-text">${optionLetter}</span>
+            <input type="text" class="form-control" name="questions[${questionIndex}].options[${optionCount}]" required>
+            <button type="button" class="btn btn-outline-danger btn-sm remove-option">Fjern</button>
+        `;
+        
+        // Add event listener for removing the option
+        optionDiv.querySelector('.remove-option').addEventListener('click', function() {
+            if (optionList.children.length > 2) {
+                optionDiv.remove();
+                updateOptionLetters(optionList);
+            } else {
+                alert('Spørsmålet må ha minst to alternativer');
+            }
+        });
+        
+        optionList.appendChild(optionDiv);
+    }
+    
+    // Just update the question numbers displayed to the user (1, 2, 3...)
+    function updateQuestionNumbers() {
+        const questions = questionsContainer.querySelectorAll('.question-card');
+        
+        questions.forEach((question, index) => {
+            // Update only the display number, not the data index
+            question.querySelector('.question-number').textContent = index + 1;
+        });
+    }
+    
+    // Update option letters (A, B, C...) and their indices in the name attribute
+    function updateOptionLetters(optionList) {
+        const options = optionList.querySelectorAll('.input-group');
+        const questionDiv = optionList.closest('.question-card');
+        const questionIndex = questionDiv.dataset.questionIndex;
+        
+        options.forEach((option, index) => {
+            // Update option letter
+            const optionLetter = String.fromCharCode(65 + index);
+            option.querySelector('.input-group-text').textContent = optionLetter;
+            
+            // Update input name attribute
+            const input = option.querySelector('input');
+            input.name = `questions[${questionIndex}].options[${index}]`;
+        });
+    }
+    
+    // Handle form submission
+    quizForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        try {
+            // Create quiz object from form data
+            const formData = new FormData(quizForm);
+            const quizData = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                category: formData.get('category'),
+                isPublished: formData.get('isPublic') === 'on',
+                questions: []
+            };
+            
+            // Process questions - organize by the data-question-index attribute
+            const questions = questionsContainer.querySelectorAll('.question-card');
+            const processedQuestions = [];
+            
+            questions.forEach(questionDiv => {
+                const questionIndex = questionDiv.dataset.questionIndex;
+                const questionType = questionDiv.querySelector('.question-type').value;
+                
+                // Build the question object using the correct index
+                const question = {
+                    question: formData.get(`questions[${questionIndex}].questionText`),
+                    options: [],
+                    correctAnswer: formData.get(`questions[${questionIndex}].correctAnswer`),
+                    points: parseInt(formData.get(`questions[${questionIndex}].points`)) || 1,
+                    type: questionType
+                };
+                
+                // Get options if applicable
+                if (questionType !== 'shortAnswer') {
+                    const optionInputs = questionDiv.querySelectorAll('.option-list input');
+                    optionInputs.forEach(input => {
+                        question.options.push(input.value);
+                    });
+                }
+                
+                processedQuestions.push(question);
+            });
+            
+            // Add questions in the order they appear in the form
+            quizData.questions = processedQuestions;
+            
+            // Send the data to the server
+            fetch('/api/quizzes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-auth-token': localStorage.getItem('token') || '' // Include auth token if available
+                },
+                body: JSON.stringify(quizData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Feil under oppretting av quiz');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data._id) {
+                    // Quiz created successfully
+                    window.location.href = `/quizzes/${data._id}`;
+                } else {
+                    alert('Feil under oppretting av quiz');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message || 'Feil under oppretting av quiz. Vennligst prøv igjen.');
+            });
+        } catch (error) {
+            console.error('Error processing form:', error);
+            alert('Det oppstod en feil ved behandling av skjemaet. Vennligst prøv igjen.');
+        }
+    });
+});
+</script>

@@ -1,0 +1,171 @@
+<div class="container">
+    <h1>Bla gjennom quizer</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" id="search-input" class="form-control" placeholder="Søk etter quizer...">
+                <button class="btn btn-primary" id="search-btn">Søk</button>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select id="category-filter" class="form-select">
+                <option value="">Alle kategorier</option>
+                <option value="Web Development">Webutvikling</option>
+                <option value="Programming">Programmering</option>
+                <option value="Networking">Nettverk</option>
+                <option value="Security">Sikkerhet</option>
+                <option value="Database">Database</option>
+                <option value="DevOps">DevOps</option>
+                <option value="Other">Annet</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select id="difficulty-filter" class="form-select">
+                <option value="">Alle vanskelighetsgrader</option>
+                <option value="Easy">Lett</option>
+                <option value="Medium">Middels</option>
+                <option value="Hard">Vanskelig</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row" id="quizzes-container">
+        <% if (locals.quizzes && quizzes.length > 0) { %>
+            <% quizzes.forEach(quiz => { %>
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><%= quiz.title %></h5>
+                            <span class="badge rounded-pill 
+                                <% if (quiz.difficulty === 'Easy') { %>bg-success<% } %>
+                                <% if (quiz.difficulty === 'Medium') { %>bg-warning<% } %>
+                                <% if (quiz.difficulty === 'Hard') { %>bg-danger<% } %>
+                            ">
+                                <% if (quiz.difficulty === 'Easy') { %>Lett<% } %>
+                                <% if (quiz.difficulty === 'Medium') { %>Middels<% } %>
+                                <% if (quiz.difficulty === 'Hard') { %>Vanskelig<% } %>
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text"><%= quiz.description %></p>
+                            <div class="mb-2">
+                                <span class="badge bg-info"><%= quiz.category %></span>
+                                <small class="text-muted ms-2"><%= quiz.questions.length %> spørsmål</small>
+                            </div>
+                            <a href="/quizzes/<%= quiz._id %>" class="btn btn-primary">Ta quiz</a>
+                        </div>
+                        <div class="card-footer text-muted">
+                            <small>Laget av <%= quiz.createdBy?.username || 'Anonym' %></small>
+                            <small class="float-end"><%= quiz.attempts || 0 %> forsøk</small>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        <% } else { %>
+            <div class="col-12 text-center">
+                <div class="alert alert-info">
+                    Ingen quizer funnet. <a href="/quizzes/create" class="alert-link">Lag en?</a>
+                </div>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const categoryFilter = document.getElementById('category-filter');
+        const difficultyFilter = document.getElementById('difficulty-filter');
+        
+        // Function to fetch and update quizzes based on filters
+        async function fetchQuizzes() {
+            try {
+                let url = '/api/quizzes?';
+                
+                if (searchInput.value) {
+                    url += `search=${encodeURIComponent(searchInput.value)}&`;
+                }
+                
+                if (categoryFilter.value) {
+                    url += `category=${encodeURIComponent(categoryFilter.value)}&`;
+                }
+                
+                if (difficultyFilter.value) {
+                    url += `difficulty=${encodeURIComponent(difficultyFilter.value)}&`;
+                }
+                
+                const response = await fetch(url);
+                const quizzes = await response.json();
+                
+                updateQuizzesDisplay(quizzes);
+            } catch (error) {
+                console.error('Error fetching quizzes:', error);
+            }
+        }
+        
+        // Function to update the UI with quizzes
+        function updateQuizzesDisplay(quizzes) {
+            const container = document.getElementById('quizzes-container');
+            
+            if (!quizzes || quizzes.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center">
+                        <div class="alert alert-info">
+                            Ingen quizer funnet. <a href="/quizzes/create" class="alert-link">Lag en?</a>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            quizzes.forEach(quiz => {
+                let badgeClass = 'bg-secondary';
+                if (quiz.difficulty === 'Easy') badgeClass = 'bg-success';
+                if (quiz.difficulty === 'Medium') badgeClass = 'bg-warning';
+                if (quiz.difficulty === 'Hard') badgeClass = 'bg-danger';
+                
+                let difficultyText = 'Annen';
+                if (quiz.difficulty === 'Easy') difficultyText = 'Lett';
+                if (quiz.difficulty === 'Medium') difficultyText = 'Middels';
+                if (quiz.difficulty === 'Hard') difficultyText = 'Vanskelig';
+                
+                html += `
+                    <div class="col-md-4 mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">${quiz.title}</h5>
+                                <span class="badge rounded-pill ${badgeClass}">
+                                    ${difficultyText}
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">${quiz.description}</p>
+                                <div class="mb-2">
+                                    <span class="badge bg-info">${quiz.category}</span>
+                                    <small class="text-muted ms-2">${quiz.questions.length} spørsmål</small>
+                                </div>
+                                <a href="/quizzes/${quiz._id}" class="btn btn-primary">Ta quiz</a>
+                            </div>
+                            <div class="card-footer text-muted">
+                                <small>Laget av ${quiz.createdBy?.username || 'Anonym'}</small>
+                                <small class="float-end">${quiz.attempts || 0} forsøk</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // Event listeners
+        searchBtn.addEventListener('click', fetchQuizzes);
+        categoryFilter.addEventListener('change', fetchQuizzes);
+        difficultyFilter.addEventListener('change', fetchQuizzes);
+        
+        // Initialize with any server-rendered quizzes
+    });
+</script>

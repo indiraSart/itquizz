@@ -1,0 +1,102 @@
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-5 col-md-7">
+        <div class="card border-0">
+            <div class="card-header text-center">
+                <h2><i class="bi bi-stars me-2"></i>Logg inn<i class="bi bi-stars ms-2"></i></h2>
+            </div>
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <i class="bi bi-person-heart" style="font-size: 3rem; color: var(--primary-color);"></i>
+                    <p class="mt-2 text-muted">Velkommen tilbake! Vi har savnet deg</p>
+                </div>
+                <form id="login-form" action="/api/auth/login" method="POST">
+                    <div class="mb-4">
+                        <label for="email" class="form-label">
+                            <i class="bi bi-envelope me-2"></i>E-post
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="din.epost@eksempel.no" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label">
+                            <i class="bi bi-key me-2"></i>Passord
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                    </div>
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="submit" class="btn btn-primary py-2">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Logg inn
+                        </button>
+                    </div>
+                </form>
+                <div class="text-center mt-4">
+                    <p>Har du ikke en konto? <a href="/auth/register" class="fw-bold text-decoration-none">Registrer her</a></p>
+                </div>
+            </div>
+        </div>
+        <div class="text-center mt-3">
+            <i class="bi bi-heart-fill mx-1" style="color: var(--primary-color); font-size: 0.8rem;"></i>
+            <i class="bi bi-star-fill mx-1" style="color: var(--warning-color); font-size: 0.8rem;"></i>
+            <i class="bi bi-flower1 mx-1" style="color: var(--success-color); font-size: 0.8rem;"></i>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('login-form');
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                // Show a loading spinner
+                const loadingHTML = `
+                    <div class="text-center">
+                        <div class="loader"></div>
+                        <p class="text-muted mt-3">Logger inn...</p>
+                    </div>
+                `;
+                form.innerHTML = loadingHTML;
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Save token to localStorage
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Show success message before redirect
+                    form.innerHTML = `
+                        <div class="text-center">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                            <p class="mt-3">Innlogging vellykket! Omdirigerer...</p>
+                        </div>
+                    `;
+                    
+                    // Redirect to home page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    // Reset form and show error
+                    window.location.reload();
+                    alert(data.message || 'Innlogging mislyktes');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.reload();
+                alert('En feil oppstod. Vennligst prøv igjen.');
+            }
+        });
+    });
+</script>
