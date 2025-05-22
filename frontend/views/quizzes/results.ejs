@@ -1,89 +1,139 @@
-<div class="results-header text-center mb-5">
-    <h1>Quiz-resultater</h1>
-    <h2><%= quiz ? quiz.title : 'Quiz' %></h2>
-    
-    <div class="score-display my-4">
-        <div class="display-4">
-            <%= typeof score !== 'undefined' ? score : 0 %> / <%= typeof totalPoints !== 'undefined' ? totalPoints : 0 %>
-        </div>
-        <% 
-            // Ensure scorePercentage is properly calculated
-            const scoreValue = typeof score !== 'undefined' ? score : 0;
-            const totalPointsValue = typeof totalPoints !== 'undefined' ? totalPoints : 1;
-            const calculatedPercentage = Math.round((scoreValue / totalPointsValue) * 100) || 0;
-        %>
-        <div class="progress" style="height: 30px;">
-            <div class="progress-bar <%= calculatedPercentage >= 70 ? 'bg-success' : calculatedPercentage >= 40 ? 'bg-warning' : 'bg-danger' %>" 
-                 role="progressbar" 
-                 style="width: <%= calculatedPercentage %>%;" 
-                 aria-valuenow="<%= calculatedPercentage %>" 
-                 aria-valuemin="0" 
-                 aria-valuemax="100">
-                <%= calculatedPercentage %>%
+<div class="container">
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body text-center">
+            <h1 id="quiz-title" class="mb-3"><%= quiz.title %></h1>
+            <div id="results-container">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Laster resultatene...</p>
             </div>
         </div>
+    </div>
+    
+    <div id="quiz-summary" class="card shadow-sm border-0 mb-4" style="display: none;">
+        <div class="card-body">
+            <h2 class="card-title">Din poengsum</h2>
+            <div class="score-display text-center my-4">
+                <div class="score-circle">
+                    <span id="score-value">0</span>
+                    <span>/</span>
+                    <span id="max-score">0</span>
+                </div>
+                <div class="mt-2">
+                    <span id="score-percentage">0%</span> riktig
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="question-results" class="mb-4">
+        <!-- Question results will be inserted here -->
+    </div>
+    
+    <div class="d-grid gap-2 col-md-6 mx-auto mb-5">
+        <a href="/quizzes/<%= quiz._id %>" class="btn btn-primary">
+            <i class="bi bi-arrow-repeat me-2"></i>Ta quizen på nytt
+        </a>
+        <a href="/quizzes/browse" class="btn btn-outline-secondary">
+            <i class="bi bi-collection me-2"></i>Utforsk flere quizer
+        </a>
     </div>
 </div>
 
-<div class="results-details">
-    <h3>Gjennomgang av spørsmål</h3>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Try to get quiz results from localStorage
+    const resultsData = localStorage.getItem('quizResults');
     
-    <% if (typeof results !== 'undefined' && results && results.length > 0) { %>
-        <% results.forEach((result, index) => { %>
-            <div class="card mb-4 <%= result.correct ? 'border-success' : 'border-danger' %>">
-                <div class="card-header <%= result.correct ? 'bg-success text-white' : 'bg-danger text-white' %> d-flex justify-content-between">
-                    <h5>Spørsmål <%= index + 1 %></h5>
-                    <div>
-                        <% if (result.correct) { %>
-                            <span class="badge bg-light text-dark">Riktig (+<%= result.question.points %> poeng)</span>
-                        <% } else { %>
-                            <span class="badge bg-light text-dark">Feil (0 poeng)</span>
-                        <% } %>
-                    </div>
+    if (resultsData) {
+        try {
+            const results = JSON.parse(resultsData);
+            displayResults(results);
+        } catch (error) {
+            console.error('Failed to parse quiz results:', error);
+            showError('Kunne ikke vise resultater. Prøv å ta quizen på nytt.');
+        }
+    } else {
+        showError('Ingen resultater funnet. Prøv å ta quizen på nytt.');
+    }
+    
+    function displayResults(results) {
+        // Update the results container
+        document.getElementById('results-container').innerHTML = '';
+        
+        // Show the quiz summary
+        const summaryCard = document.getElementById('quiz-summary');
+        summaryCard.style.display = 'block';
+        
+        // Update the score display
+        document.getElementById('score-value').textContent = results.score;
+        document.getElementById('max-score').textContent = results.totalPoints;
+        
+        // Calculate percentage
+        const percentage = Math.round((results.score / results.totalPoints) * 100);
+        document.getElementById('score-percentage').textContent = `${percentage}%`;
+        
+        // Create elements for each question
+        const questionResults = document.getElementById('question-results');
+        
+        results.results.forEach((result, index) => {
+            const questionCard = document.createElement('div');
+            questionCard.className = 'card shadow-sm border-0 mb-3';
+            
+            const questionClass = result.correct ? 'correct-answer' : 'incorrect-answer';
+            const icon = result.correct ? 
+                '<i class="bi bi-check-circle-fill text-success"></i>' : 
+                '<i class="bi bi-x-circle-fill text-danger"></i>';
+            
+            questionCard.innerHTML = `
+                <div class="card-header d-flex justify-content-between">
+                    <span>Spørsmål ${index + 1}</span>
+                    <span class="${questionClass}">${icon} ${result.correct ? 'Riktig' : 'Feil'}</span>
                 </div>
                 <div class="card-body">
-                    <p class="lead"><%= result.question.questionText %></p>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    Ditt svar
-                                </div>
-                                <div class="card-body">
-                                    <%= result.userAnswer || 'Ingen svar gitt' %>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    Riktig svar
-                                </div>
-                                <div class="card-body">
-                                    <%= result.question.correctAnswer %>
-                                </div>
-                            </div>
-                        </div>
+                    <p class="card-text">${result.question.question}</p>
+                    <div class="question-details mt-3">
+                        <p><strong>Ditt svar:</strong> ${result.userAnswer}</p>
+                        <p><strong>Riktig svar:</strong> ${result.question.correctAnswer}</p>
                     </div>
-                    
-                    <% if (!result.correct) { %>
-                        <div class="explanation alert alert-info">
-                            <strong>Forklaring:</strong>
-                            <p>Det riktige svaret er "<%= result.question.correctAnswer %>".</p>
-                        </div>
-                    <% } %>
                 </div>
-            </div>
-        <% }) %>
-    <% } else { %>
-        <div class="alert alert-warning">
-            <p>Ingen resultater tilgjengelige.</p>
-        </div>
-    <% } %>
+            `;
+            
+            questionResults.appendChild(questionCard);
+        });
+    }
     
-    <div class="d-flex justify-content-between mt-5">
-        <a href="/quizzes/<%= quiz && quiz._id ? quiz._id : '#' %>" class="btn btn-primary">Ta igjen</a>
-        <a href="/quizzes/browse" class="btn btn-secondary">Bla gjennom flere quizer</a>
-    </div>
-</div>
+    function showError(message) {
+        document.getElementById('results-container').innerHTML = `
+            <div class="alert alert-warning" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>${message}
+            </div>
+        `;
+    }
+});
+</script>
+
+<style>
+.score-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border: 3px solid var(--primary-color);
+}
+
+.correct-answer {
+    color: var(--success-color);
+}
+
+.incorrect-answer {
+    color: var(--danger-color);
+}
+</style>

@@ -50,10 +50,22 @@
                         
                         <% if (locals.user) { %>
                             <li class="nav-item">
-                                <a class="nav-link" href="/profile">
-                                    <i class="bi bi-person nav-icon"></i> Profil
+                                <a class="nav-link <%= title === 'My Profile' ? 'active' : '' %>" href="/profile">
+                                    <i class="bi bi-person nav-icon"></i> Min Profil
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= title === 'My Quizzes' ? 'active' : '' %>" href="/my-quizzes">
+                                    <i class="bi bi-journal-text nav-icon"></i> Mine Quizer
+                                </a>
+                            </li>
+                            <% if (user.role === 'admin') { %>
+                                <li class="nav-item">
+                                    <a class="nav-link <%= title.includes('Admin') ? 'active' : '' %>" href="/admin">
+                                        <i class="bi bi-shield-lock nav-icon"></i> Admin
+                                    </a>
+                                </li>
+                            <% } %>
                             <li class="nav-item">
                                 <a class="nav-link" href="/auth/logout">
                                     <i class="bi bi-box-arrow-right nav-icon"></i> Logg ut
@@ -110,10 +122,22 @@
                     
                     <% if (locals.user) { %>
                         <li class="nav-item">
-                            <a class="nav-link" href="/profile">
-                                <i class="bi bi-person nav-icon"></i> Profil
+                            <a class="nav-link <%= title === 'My Profile' ? 'active' : '' %>" href="/profile">
+                                <i class="bi bi-person nav-icon"></i> Min Profil
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= title === 'My Quizzes' ? 'active' : '' %>" href="/my-quizzes">
+                                <i class="bi bi-journal-text nav-icon"></i> Mine Quizer
+                            </a>
+                        </li>
+                        <% if (user.role === 'admin') { %>
+                            <li class="nav-item">
+                                <a class="nav-link <%= title.includes('Admin') ? 'active' : '' %>" href="/admin">
+                                    <i class="bi bi-shield-lock nav-icon"></i> Admin
+                                </a>
+                            </li>
+                        <% } %>
                         <li class="nav-item">
                             <a class="nav-link" href="/auth/logout">
                                 <i class="bi bi-box-arrow-right nav-icon"></i> Logg ut
@@ -207,6 +231,30 @@
             // Initialize tooltips
             const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
             const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication state
+            const token = localStorage.getItem('token');
+            
+            // Handle logout link
+            const logoutLinks = document.querySelectorAll('a[href="/auth/logout"]');
+            logoutLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Clear localStorage token
+                    localStorage.removeItem('token');
+                    
+                    // Make a request to logout endpoint (clears cookies)
+                    fetch('/auth/logout', {
+                        credentials: 'include'
+                    }).finally(() => {
+                        window.location.href = '/';
+                    });
+                });
+            });
         });
     </script>
 </body>

@@ -4,6 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
+const cookieParser = require('cookie-parser');
 // Using node-fetch v2 syntax which works with CommonJS
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 require('dotenv').config(); // Add this line to load .env file
@@ -15,12 +16,19 @@ const userRoutes = require('./routes/user');
 const adminRoutes = require('./routes/admin');
 const faqRoutes = require('./routes/faq');
 
+// Import middleware
+const { extractUser, authMiddleware } = require('./middleware/auth');
+
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+
+// Apply the user extraction middleware to all routes
+app.use(extractUser);
 
 // Set up EJS view engine with layouts
 app.use(expressLayouts);
@@ -43,6 +51,44 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/faq', faqRoutes);
+
+// User profile routes
+app.get('/profile', authMiddleware, async (req, res) => {
+    try {
+        // Fetch user quiz history and stats
+        const Quiz = require('./models/Quiz');
+        const userQuizzes = await Quiz.find({ createdBy: req.user._id }).sort({ createdAt: -1 });
+        
+        res.render('profile/dashboard', {
+            title: 'My Profile',
+            user: req.user,
+            userQuizzes
+        });
+    } catch (error) {
+        console.error('Error fetching profile data:', error);
+        res.render('error', {
+            title: 'Error',
+            message: 'Failed to load profile data'
+        });
+    }
+});
+
+app.get('/my-quizzes', authMiddleware, async (req, res) => {
+    try {
+        const Quiz = require('./models/Quiz');
+        const userQuizzes = await Quiz.find({ createdBy: req.user._id }).sort({ createdAt: -1 });
+        
+        res.render('profile/my-quizzes', {
+            title: 'My Quizzes',
+            quizzes: userQuizzes
+        });
+    } catch (error) {
+        res.render('error', {
+            title: 'Error',
+            message: 'Failed to load your quizzes'
+        });
+    }
+});
 
 // Frontend Routes
 app.get('/', async (req, res) => {
@@ -135,7 +181,11 @@ app.get('/', async (req, res) => {
 
 // Authentication routes (frontend)
 app.get('/auth/login', (req, res) => {
-    res.render('auth/login', { title: 'Login' });
+    const redirect = req.query.redirect || '/';
+    res.render('auth/login', { 
+        title: 'Login',
+        redirect
+    });
 });
 
 app.get('/auth/register', (req, res) => {
@@ -161,43 +211,94 @@ app.get('/quizzes/create', (req, res) => {
     });
 });
 
-// Handle quiz creation form submission
+// Handle quiz creation form submission - simplified version that redirects to API
+app.post('/quizzes/create', (req, res) => {
+    // If user is not authenticated, redirect to login
+    if (!req.user) {
+        return res.redirect('/auth/login?redirect=/quizzes/create');
+    }
+    
+    // Forward to API endpoint (client-side JavaScript should handle this, but this is a fallback)
+    res.redirect('/api/quizzes');
+});
+
+// Enhanced quiz creation handler - as a fallback for the API route
 app.post('/quizzes/create', async (req, res) => {
     try {
-        // If user is not logged in, redirect to login page
+        console.log('Direct quiz creation route accessed');
+        console.log('Auth status:', req.user ? 'Authenticated' : 'Not authenticated');
+        
+        // Redirect if not logged in
         if (!req.user) {
-            // Store intended action in session/cookie if implementing that feature
-            return res.redirect('/auth/login');
+            return res.redirect('/auth/login?redirect=/quizzes/create');
         }
         
-        // Forward the request to the API endpoint
-        const response = await fetch(`${req.protocol}://${req.get('host')}/api/quizzes`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-auth-token': req.headers['x-auth-token'] // Pass along auth token if available
-            },
-            body: JSON.stringify(req.body)
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            // Redirect to the newly created quiz
-            res.redirect(`/quizzes/${data._id}`);
-        } else {
-            // Re-render the create page with error message
-            res.render('quizzes/create', {
+        // Basic validation
+        if (!req.body.title || !req.body.description) {
+            return res.render('quizzes/create', {
                 title: 'Create Quiz',
-                error: data.message || 'Error creating quiz',
-                formData: req.body // Return form data so user doesn't lose their input
+                error: 'Title and description are required'
             });
         }
+        
+        // Create a basic quiz object
+        const quizData = {
+            title: req.body.title,
+            description: req.body.description,
+            category: req.body.category || 'Other',
+            createdBy: req.user._id,
+            questions: []
+        };
+        
+        // Process questions if they exist
+        if (req.body.questions) {
+            // Handle string format (from regular form submission)
+            let questions = req.body.questions;
+            if (typeof questions === 'string') {
+                try {
+                    questions = JSON.parse(questions);
+                } catch (e) {
+                    console.error('Failed to parse questions JSON:', e);
+                }
+            }
+            
+            // If questions is an array, process it
+            if (Array.isArray(questions)) {
+                questions.forEach(q => {
+                    const questionText = q.questionText || q.question || '';
+                    if (!questionText) return;
+                    
+                    quizData.questions.push({
+                        question: questionText,
+                        questionType: q.questionType || 'multipleChoice',
+                        options: Array.isArray(q.options) ? q.options : [],
+                        correctAnswer: q.correctAnswer || '',
+                        points: parseInt(q.points) || 1
+                    });
+                });
+            }
+        }
+        
+        // Make sure we have at least one question
+        if (quizData.questions.length === 0) {
+            return res.render('quizzes/create', {
+                title: 'Create Quiz',
+                error: 'At least one question is required'
+            });
+        }
+        
+        // Create and save the quiz
+        const Quiz = require('./models/Quiz');
+        const quiz = new Quiz(quizData);
+        await quiz.save();
+        
+        // Redirect to the new quiz
+        res.redirect(`/quizzes/${quiz._id}`);
     } catch (error) {
+        console.error('Error in direct quiz creation route:', error);
         res.render('quizzes/create', {
             title: 'Create Quiz',
-            error: 'Server error occurred',
-            formData: req.body
+            error: 'An error occurred: ' + error.message
         });
     }
 });
@@ -225,6 +326,34 @@ app.get('/quizzes/:id', async (req, res) => {
         res.status(500).render('error', { 
             title: 'Error',
             message: 'Error loading quiz' 
+        });
+    }
+});
+
+// Route for quiz results
+app.get('/quizzes/:id/results', async (req, res) => {
+    try {
+        // Fetch quiz from API
+        const response = await fetch(`${req.protocol}://${req.get('host')}/api/quizzes/${req.params.id}`);
+        
+        if (!response.ok) {
+            return res.status(404).render('error', { 
+                title: 'Not Found',
+                message: 'Quiz not found' 
+            });
+        }
+        
+        const quiz = await response.json();
+        
+        res.render('quizzes/results', { 
+            title: 'Quiz Results',
+            quiz: quiz,
+            // The actual score will be passed from the client-side via JavaScript
+        });
+    } catch (error) {
+        res.status(500).render('error', { 
+            title: 'Error',
+            message: 'Error loading quiz results' 
         });
     }
 });

@@ -245,79 +245,111 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         try {
-            // Create quiz object from form data
+            // Show loading state
+            const submitBtn = quizForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Lagrer quiz...';
+            
+            // Create simplified quiz object from form data
             const formData = new FormData(quizForm);
+            
+            // Basic quiz data
             const quizData = {
                 title: formData.get('title'),
                 description: formData.get('description'),
-                category: formData.get('category'),
+                category: formData.get('category') || 'Other',
                 isPublished: formData.get('isPublic') === 'on',
                 questions: []
             };
             
-            // Process questions - organize by the data-question-index attribute
+            // Process all question cards to collect data
             const questions = questionsContainer.querySelectorAll('.question-card');
-            const processedQuestions = [];
-            
             questions.forEach(questionDiv => {
                 const questionIndex = questionDiv.dataset.questionIndex;
                 const questionType = questionDiv.querySelector('.question-type').value;
+                const questionText = formData.get(`questions[${questionIndex}].questionText`);
                 
-                // Build the question object using the correct index
-                const question = {
-                    question: formData.get(`questions[${questionIndex}].questionText`),
+                if (!questionText) return; // Skip empty questions
+                
+                const questionObj = {
+                    questionText: questionText,
+                    questionType: questionType,
                     options: [],
-                    correctAnswer: formData.get(`questions[${questionIndex}].correctAnswer`),
-                    points: parseInt(formData.get(`questions[${questionIndex}].points`)) || 1,
-                    type: questionType
+                    correctAnswer: formData.get(`questions[${questionIndex}].correctAnswer`) || '',
+                    points: parseInt(formData.get(`questions[${questionIndex}].points`)) || 1
                 };
                 
-                // Get options if applicable
+                // Add options for multiple choice questions
                 if (questionType !== 'shortAnswer') {
                     const optionInputs = questionDiv.querySelectorAll('.option-list input');
                     optionInputs.forEach(input => {
-                        question.options.push(input.value);
+                        if (input.value.trim()) {
+                            questionObj.options.push(input.value.trim());
+                        }
                     });
                 }
                 
-                processedQuestions.push(question);
+                quizData.questions.push(questionObj);
             });
             
-            // Add questions in the order they appear in the form
-            quizData.questions = processedQuestions;
+            console.log('Sending quiz data:', quizData);
             
-            // Send the data to the server
+            // Check if we have any questions
+            if (quizData.questions.length === 0) {
+                alert('En quiz må ha minst ett spørsmål.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Lag quiz';
+                return;
+            }
+            
+            // Get the authentication token
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Du må være logget inn for å lage en quiz. Omdirigerer til innloggingssiden...');
+                window.location.href = '/auth/login?redirect=/quizzes/create';
+                return;
+            }
+            
+            // Send the request
             fetch('/api/quizzes', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-auth-token': localStorage.getItem('token') || '' // Include auth token if available
+                    'x-auth-token': token
                 },
+                credentials: 'include',
                 body: JSON.stringify(quizData)
             })
             .then(response => {
                 if (!response.ok) {
-                    return response.json().then(err => {
-                        throw new Error(err.message || 'Feil under oppretting av quiz');
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Feil ved oppretting av quiz');
                     });
                 }
                 return response.json();
             })
             .then(data => {
+                console.log('Quiz created successfully:', data);
+                alert('Quiz opprettet!');
+                
                 if (data._id) {
-                    // Quiz created successfully
                     window.location.href = `/quizzes/${data._id}`;
                 } else {
-                    alert('Feil under oppretting av quiz');
+                    window.location.href = '/my-quizzes';
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert(error.message || 'Feil under oppretting av quiz. Vennligst prøv igjen.');
+                console.error('Error creating quiz:', error);
+                alert(error.message || 'Feil ved oppretting av quiz. Prøv igjen.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Lag quiz';
             });
         } catch (error) {
             console.error('Error processing form:', error);
-            alert('Det oppstod en feil ved behandling av skjemaet. Vennligst prøv igjen.');
+            alert('En feil oppstod ved behandling av skjemaet. Prøv igjen.');
+            const submitBtn = quizForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Lag quiz';
         }
     });
 });

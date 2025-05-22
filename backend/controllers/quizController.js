@@ -3,14 +3,74 @@ const Quiz = require('../models/Quiz');
 // Create a new quiz
 exports.createQuiz = async (req, res) => {
     try {
-        const quiz = new Quiz({
-            ...req.body,
-            createdBy: req.user._id // Assuming authentication middleware adds user to req
+        console.log('Creating quiz with request body:', JSON.stringify(req.body, null, 2));
+        console.log('User logged in:', req.user ? `${req.user.username} (${req.user._id})` : 'No user');
+        
+        // Check authentication
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: 'Du må være logget inn for å lage en quiz' });
+        }
+        
+        // Basic validation
+        if (!req.body.title) {
+            return res.status(400).json({ message: 'Quizzen må ha en tittel' });
+        }
+        
+        if (!req.body.description) {
+            return res.status(400).json({ message: 'Quizzen må ha en beskrivelse' });
+        }
+        
+        if (!req.body.questions || !Array.isArray(req.body.questions) || req.body.questions.length === 0) {
+            return res.status(400).json({ message: 'Quizzen må ha minst ett spørsmål' });
+        }
+        
+        // Create a normalized quiz object
+        const quizData = {
+            title: req.body.title,
+            description: req.body.description,
+            category: req.body.category || 'Other',
+            createdBy: req.user._id,
+            isPublished: req.body.isPublished !== false,
+            questions: req.body.questions.map(q => ({
+                question: q.questionText || q.question,
+                questionType: q.questionType || 'multipleChoice',
+                options: Array.isArray(q.options) ? q.options : [],
+                correctAnswer: q.correctAnswer || '',
+                points: parseInt(q.points) || 1
+            }))
+        };
+        
+        console.log('Creating quiz with normalized data');
+        
+        // Create and save the quiz
+        const Quiz = require('../models/Quiz');
+        const quiz = new Quiz(quizData);
+        
+        const savedQuiz = await quiz.save();
+        console.log('Quiz saved successfully with ID:', savedQuiz._id);
+        
+        res.status(201).json({
+            message: 'Quiz opprettet!',
+            _id: savedQuiz._id,
+            title: savedQuiz.title
         });
-        await quiz.save();
-        res.status(201).json(quiz);
     } catch (error) {
-        res.status(500).json({ message: 'Error creating quiz', error: error.message });
+        console.error('Error creating quiz:', error);
+        
+        // Return appropriate error based on the type
+        if (error.name === 'ValidationError') {
+            // Handle Mongoose validation errors
+            const messages = Object.values(error.errors).map(e => e.message);
+            return res.status(400).json({ 
+                message: 'Valideringsfeil', 
+                details: messages.join(', ')
+            });
+        }
+        
+        res.status(500).json({ 
+            message: 'Det oppstod en feil ved oppretting av quizzen', 
+            error: error.message 
+        });
     }
 };
 
@@ -87,6 +147,8 @@ exports.deleteQuiz = async (req, res) => {
 exports.submitQuizAttempt = async (req, res) => {
     try {
         const { quizId, answers } = req.body;
+        console.log('Submitting quiz attempt:', { quizId, answers });
+        
         const quiz = await Quiz.findById(quizId);
         
         if (!quiz) {
@@ -95,21 +157,35 @@ exports.submitQuizAttempt = async (req, res) => {
         
         // Calculate score
         let score = 0;
+        let totalPoints = 0;
         const results = [];
         
         answers.forEach((answer, index) => {
+            if (index >= quiz.questions.length) return;
+            
             const question = quiz.questions[index];
-            const isCorrect = question.correctAnswer === answer;
+            totalPoints += question.points || 1;
+            
+            let isCorrect = false;
+            
+            // Handle different question types
+            if (question.questionType === 'multipleChoice') {
+                isCorrect = parseInt(answer) === parseInt(question.correctAnswer);
+            } else if (question.questionType === 'trueFalse') {
+                isCorrect = answer.toString().toLowerCase() === question.correctAnswer.toString().toLowerCase();
+            } else {
+                // Short answer - could implement more flexible matching
+                isCorrect = answer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase();
+            }
             
             if (isCorrect) {
-                score++;
+                score += question.points || 1;
             }
             
             results.push({
-                questionId: question._id,
+                question: question,
                 userAnswer: answer,
-                correctAnswer: question.correctAnswer,
-                isCorrect
+                correct: isCorrect
             });
         });
         
@@ -117,12 +193,19 @@ exports.submitQuizAttempt = async (req, res) => {
         quiz.attempts = (quiz.attempts || 0) + 1;
         await quiz.save();
         
+        // If user is logged in, save their attempt
+        if (req.user) {
+            // Code to save user attempt history if needed
+        }
+        
         res.status(200).json({
             score,
-            totalQuestions: quiz.questions.length,
-            results
+            totalPoints,
+            results,
+            quiz
         });
     } catch (error) {
+        console.error('Error submitting quiz attempt:', error);
         res.status(500).json({ message: 'Error submitting quiz attempt', error: error.message });
     }
 };

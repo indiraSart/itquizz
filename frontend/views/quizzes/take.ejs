@@ -23,59 +23,70 @@
     </div>
 </div>
 
-<form id="quizForm" action="/quizzes/<%= quiz._id %>/submit" method="POST">
-    <% quiz.questions.forEach((question, index) => { %>
-        <div class="card question-card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="bi bi-puzzle-fill me-2" style="color: var(--primary-color);"></i>
-                    Spørsmål <%= index + 1 %>
-                </h5>
-                <span class="badge bg-info">
-                    <i class="bi bi-star-fill me-1"></i>
-                    <%= question.points %> poeng<%= question.points > 1 ? '' : '' %>
-                </span>
-            </div>
-            <div class="card-body">
-                <p class="lead mb-4"><%= question.questionText %></p>
-                
-                <% if (question.questionType === 'multipleChoice') { %>
-                    <div class="option-list">
-                        <% question.options.forEach((option, optionIndex) => { %>
+<form id="quizForm" method="POST">
+    <% if (quiz.questions && quiz.questions.length > 0) { %>
+        <% quiz.questions.forEach((question, index) => { %>
+            <div class="card question-card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-puzzle-fill me-2" style="color: var(--primary-color);"></i>
+                        Spørsmål <%= index + 1 %>
+                    </h5>
+                    <span class="badge bg-info">
+                        <i class="bi bi-star-fill me-1"></i>
+                        <%= question.points || 1 %> poeng
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="lead mb-4"><%= question.question %></p>
+                    
+                    <% if (question.questionType === 'multipleChoice') { %>
+                        <div class="option-list">
+                            <% if (question.options && question.options.length > 0) { %>
+                                <% question.options.forEach((option, optionIndex) => { %>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="answers[<%= index %>]" 
+                                               id="q<%= index %>_opt<%= optionIndex %>" value="<%= optionIndex %>" required>
+                                        <label class="form-check-label w-100" for="q<%= index %>_opt<%= optionIndex %>">
+                                            <%= option %>
+                                        </label>
+                                    </div>
+                                <% }) %>
+                            <% } else { %>
+                                <p class="text-danger">No options available for this question</p>
+                            <% } %>
+                        </div>
+                    <% } else if (question.questionType === 'trueFalse') { %>
+                        <div class="option-list">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="answers[<%= index %>]" 
-                                       id="q<%= index %>_opt<%= optionIndex %>" value="<%= optionIndex %>" required>
-                                <label class="form-check-label w-100" for="q<%= index %>_opt<%= optionIndex %>">
-                                    <%= option %>
+                                       id="q<%= index %>_true" value="true" required>
+                                <label class="form-check-label w-100" for="q<%= index %>_true">
+                                    <i class="bi bi-check-circle me-2"></i>Sant
                                 </label>
                             </div>
-                        <% }) %>
-                    </div>
-                <% } else if (question.questionType === 'trueFalse') { %>
-                    <div class="option-list">
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="answers[<%= index %>]" 
-                                   id="q<%= index %>_true" value="true" required>
-                            <label class="form-check-label w-100" for="q<%= index %>_true">
-                                <i class="bi bi-check-circle me-2"></i>Sant
-                            </label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="answers[<%= index %>]" 
+                                       id="q<%= index %>_false" value="false" required>
+                                <label class="form-check-label w-100" for="q<%= index %>_false">
+                                    <i class="bi bi-x-circle me-2"></i>Usant
+                                </label>
+                            </div>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="answers[<%= index %>]" 
-                                   id="q<%= index %>_false" value="false" required>
-                            <label class="form-check-label w-100" for="q<%= index %>_false">
-                                <i class="bi bi-x-circle me-2"></i>Usant
-                            </label>
+                    <% } else if (question.questionType === 'shortAnswer') { %>
+                        <div class="form-group">
+                            <input type="text" class="form-control" name="answers[<%= index %>]" placeholder="Skriv svaret ditt her..." required>
                         </div>
-                    </div>
-                <% } else if (question.questionType === 'shortAnswer') { %>
-                    <div class="form-group">
-                        <input type="text" class="form-control" name="answers[<%= index %>]" placeholder="Skriv svaret ditt her..." required>
-                    </div>
-                <% } %>
+                    <% } %>
+                </div>
             </div>
+        <% }) %>
+    <% } else { %>
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Denne quizen har ingen spørsmål ennå.
         </div>
-    <% }) %>
+    <% } %>
 
     <div class="card border-0 mb-5">
         <div class="card-body text-center">
@@ -113,6 +124,70 @@
                     selectedOption.style.borderLeft = '2px solid var(--primary-color)';
                 }
             });
+        });
+        
+        // Debug logging
+        console.log('Quiz data loaded');
+        
+        // Handle form submission
+        const quizForm = document.getElementById('quizForm');
+        quizForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Get all answers
+            const answers = [];
+            const formData = new FormData(quizForm);
+            
+            // Format answers array from form inputs
+            <% if (quiz.questions && quiz.questions.length > 0) { %>
+                <% quiz.questions.forEach((question, index) => { %>
+                    answers.push(formData.get(`answers[<%= index %>]`));
+                <% }); %>
+            <% } %>
+            
+            try {
+                // Show loading state
+                const submitBtn = quizForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="bi bi-hourglass me-2"></i>Behandler svar...';
+                
+                // Get token from localStorage or cookies
+                const token = localStorage.getItem('token') || '';
+                
+                // Submit answers to the server
+                const response = await fetch('/api/quizzes/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-auth-token': token
+                    },
+                    body: JSON.stringify({
+                        quizId: '<%= quiz._id %>',
+                        answers: answers
+                    }),
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to submit quiz');
+                }
+                
+                const result = await response.json();
+                
+                // Store results in localStorage to pass to results page
+                localStorage.setItem('quizResults', JSON.stringify(result));
+                
+                // Redirect to results page
+                window.location.href = `/quizzes/<%= quiz._id %>/results`;
+            } catch (error) {
+                console.error('Error submitting quiz:', error);
+                alert('Det oppstod en feil under innsending av quiz. Vennligst prøv igjen.');
+                
+                // Re-enable submit button
+                const submitBtn = quizForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-send-check me-2"></i>Send inn svar';
+            }
         });
     });
 </script>

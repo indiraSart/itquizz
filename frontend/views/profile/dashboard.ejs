@@ -1,0 +1,103 @@
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="profile-avatar me-3">
+                        <i class="bi bi-person-circle" style="font-size: 4rem; color: var(--primary-color);"></i>
+                    </div>
+                    <div>
+                        <h1 class="mb-1"><%= user.username %></h1>
+                        <p class="text-muted mb-0"><%= user.email %></p>
+                        <% if (user.role === 'admin') { %>
+                            <span class="badge bg-warning">Admin</span>
+                        <% } %>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card stats-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Mine Quiz-statistikker</h5>
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <h3><%= userQuizzes.length %></h3>
+                                        <p class="mb-0">Quizer opprettet</p>
+                                    </div>
+                                    <div class="col-4">
+                                        <h3><%= userQuizzes.reduce((sum, quiz) => sum + (quiz.attempts || 0), 0) %></h3>
+                                        <p class="mb-0">Totale forsøk</p>
+                                    </div>
+                                    <div class="col-4">
+                                        <h3><%= userQuizzes.reduce((sum, quiz) => sum + (quiz.questions ? quiz.questions.length : 0), 0) %></h3>
+                                        <p class="mb-0">Spørsmål</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Hurtig handlinger</h5>
+                                <div class="d-grid gap-2">
+                                    <a href="/quizzes/create" class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>Lag en ny quiz</a>
+                                    <a href="/my-quizzes" class="btn btn-outline-primary"><i class="bi bi-journal-text me-2"></i>Se alle mine quizer</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Mine nyeste quizer</h5>
+                <a href="/my-quizzes" class="btn btn-sm btn-outline-primary">Se alle</a>
+            </div>
+            <div class="card-body">
+                <% if (userQuizzes && userQuizzes.length > 0) { %>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tittel</th>
+                                    <th>Kategori</th>
+                                    <th>Spørsmål</th>
+                                    <th>Forsøk</th>
+                                    <th>Opprettet</th>
+                                    <th>Handlinger</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% userQuizzes.slice(0, 5).forEach(quiz => { %>
+                                    <tr>
+                                        <td><%= quiz.title %></td>
+                                        <td><span class="badge bg-info"><%= quiz.category %></span></td>
+                                        <td><%= quiz.questions ? quiz.questions.length : 0 %></td>
+                                        <td><%= quiz.attempts || 0 %></td>
+                                        <td><%= new Date(quiz.createdAt).toLocaleDateString() %></td>
+                                        <td>
+                                            <a href="/quizzes/<%= quiz._id %>" class="btn btn-sm btn-primary">Vis</a>
+                                            <a href="/quizzes/<%= quiz._id %>/edit" class="btn btn-sm btn-outline-secondary">Rediger</a>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } else { %>
+                    <div class="text-center py-4">
+                        <p>Du har ikke laget noen quizer ennå.</p>
+                        <a href="/quizzes/create" class="btn btn-primary">Lag din første quiz</a>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>

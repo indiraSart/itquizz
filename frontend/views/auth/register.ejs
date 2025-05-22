@@ -67,12 +67,7 @@
             
             // Basic validation
             if (password !== confirmPassword) {
-                const errorHTML = `
-                    <div class="alert alert-danger" role="alert">
-                        <i class="bi bi-exclamation-circle me-2"></i> Passordene samsvarer ikke
-                    </div>
-                `;
-                form.insertAdjacentHTML('beforebegin', errorHTML);
+                alert('Passordene samsvarer ikke');
                 return;
             }
             
@@ -80,7 +75,9 @@
                 // Show a loading spinner
                 const loadingHTML = `
                     <div class="text-center">
-                        <div class="loader"></div>
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                         <p class="text-muted mt-3">Oppretter kontoen din...</p>
                     </div>
                 `;
@@ -91,20 +88,23 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, email, password })
+                    body: JSON.stringify({ username, email, password }),
+                    credentials: 'include'
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok) {
+                    console.log('Registration successful, saving token:', data.token);
                     // Save token to localStorage
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    if (data.token) {
+                        localStorage.setItem('token', data.token);
+                    }
                     
-                    // Show success message before redirect
+                    // Show success message
                     form.innerHTML = `
                         <div class="text-center">
-                            <i class="bi bi-check-circle-fill" style="font-size: 3rem; color: var(--success-color);"></i>
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
                             <p class="mt-3">Registrering vellykket! Velkommen!</p>
                             <p class="text-muted">Omdirigerer til hjemmesiden...</p>
                         </div>
@@ -115,14 +115,14 @@
                         window.location.href = '/';
                     }, 1500);
                 } else {
-                    // Reset form and show error
-                    window.location.reload();
+                    console.error('Registration failed:', data.message);
                     alert(data.message || 'Registrering mislyktes');
+                    window.location.reload();
                 }
             } catch (error) {
-                console.error('Error:', error);
-                window.location.reload();
+                console.error('Error during registration:', error);
                 alert('En feil oppstod. Vennligst prøv igjen.');
+                window.location.reload();
             }
         });
     });

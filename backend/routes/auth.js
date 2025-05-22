@@ -17,8 +17,12 @@ router.get('/register', (req, res) => {
     res.render('auth/register', { title: 'Register' });
 });
 
+// Logout route
 router.get('/logout', (req, res) => {
-    // For browser-based logout, redirect to home
+    // Clear the token cookie
+    res.clearCookie('token');
+    
+    // Redirect to home page
     res.redirect('/');
 });
 

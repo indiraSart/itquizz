@@ -1,0 +1,104 @@
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Mine Quizer</h1>
+            <a href="/quizzes/create" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Lag ny quiz
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <% if (quizzes && quizzes.length > 0) { %>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tittel</th>
+                                    <th>Kategori</th>
+                                    <th>Spørsmål</th>
+                                    <th>Forsøk</th>
+                                    <th>Status</th>
+                                    <th>Opprettet</th>
+                                    <th>Handlinger</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% quizzes.forEach(quiz => { %>
+                                    <tr>
+                                        <td><%= quiz.title %></td>
+                                        <td><span class="badge bg-info"><%= quiz.category %></span></td>
+                                        <td><%= quiz.questions ? quiz.questions.length : 0 %></td>
+                                        <td><%= quiz.attempts || 0 %></td>
+                                        <td>
+                                            <% if (quiz.isPublished) { %>
+                                                <span class="badge bg-success">Publisert</span>
+                                            <% } else { %>
+                                                <span class="badge bg-secondary">Utkast</span>
+                                            <% } %>
+                                        </td>
+                                        <td><%= new Date(quiz.createdAt).toLocaleDateString() %></td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="/quizzes/<%= quiz._id %>" class="btn btn-sm btn-primary">Vis</a>
+                                                <a href="/quizzes/<%= quiz._id %>/edit" class="btn btn-sm btn-outline-secondary">Rediger</a>
+                                                <button class="btn btn-sm btn-outline-danger delete-quiz" data-quiz-id="<%= quiz._id %>">Slett</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } else { %>
+                    <div class="text-center py-5">
+                        <div class="mb-4">
+                            <i class="bi bi-journal-x" style="font-size: 4rem; color: var(--gray-400);"></i>
+                        </div>
+                        <h3>Ingen quizer ennå</h3>
+                        <p class="text-muted mb-4">Du har ikke laget noen quizer ennå. Kom i gang med å lage din første quiz!</p>
+                        <a href="/quizzes/create" class="btn btn-primary btn-lg">
+                            <i class="bi bi-plus-circle me-2"></i>Lag din første quiz
+                        </a>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle delete quiz buttons
+    const deleteButtons = document.querySelectorAll('.delete-quiz');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', async function() {
+            const quizId = this.getAttribute('data-quiz-id');
+            
+            if (confirm('Er du sikker på at du vil slette denne quizen? Dette kan ikke angres.')) {
+                try {
+                    const response = await fetch(`/api/quizzes/${quizId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-auth-token': localStorage.getItem('token') || ''
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // Refresh the page to show updated list
+                        window.location.reload();
+                    } else {
+                        alert('Kunne ikke slette quizen. Vennligst prøv igjen.');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('En feil oppstod. Vennligst prøv igjen.');
+                }
+            }
+        });
+    });
+});
+</script>
